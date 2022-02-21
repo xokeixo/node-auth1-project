@@ -7,19 +7,7 @@ const {
   checkUsernameFree 
 } = require('../auth/auth-middleware');
 
-// router.post('/register', checkPasswordLength, checkUsernameFree, async (req, res, next) => {
-//   try {
-//     const hash = bcrypt.hashSync(req.body.password, 10)
-//     const newUser = await User.add({ 
-//       username: req.body.username, 
-//       password: hash})
-//     res.status(201).json(newUser)
-//   } catch (error) {
-//     res.status(500).json(`Server error: ${error.message}`)
-//   }
-// });
-
-router.post('/register', (req, res, next) => {
+router.post('/register', checkPasswordLength, checkUsernameFree, (req, res, next) => {
   let user = req.body;
   const hash = bcrypt.hashSync(user.password, 10); 
   user.password = hash;
@@ -28,45 +16,48 @@ router.post('/register', (req, res, next) => {
     .then((saved) => {
       res.status(201).json(saved);
     })
-    .catch((error) => {
-      console.log(error);
-      res.status(500).json(error);
+    .catch((err) => {
+      console.log(err);
+      res.status(500).json(err);
     });
 })
 
-router.post('/login', checkUsernameExists, async (req, res, next) => {
-  try {
-    const verified = bcrypt.compareSync(req.body.password, req.userData.username)
-    if(verified){
-      req.session.user = req.userData
-      req.json(`Welcome back ${req.userData.username}`)
-    } else {
-      res.status(401).json("Incorrect username or password")
-    }
-  } catch (error) {
-    res.status(500).json(`Server error: ${error.message}`)
-  }
+router.post("/login", checkUsernameExists, (req, res, next) => {
+  let { username, password } = req.body;
+
+  User.findBy({ username })
+    .first()
+    .then((user) => {
+      if (user && bcrypt.compareSync(password, user.password)) {
+        req.session.user = user;
+        res.status(200).json({
+          message: `Welcome ${user.username}!`,
+        });
+      } else {
+        res.status(401).json({
+          message: "Invalid credentials"
+        });
+      }
+    })
+    .catch((err) => {
+      res.status(500).json(err);
+    });
 });
 
-router.get('/logout', async (req, res, next) => {
-  if (req.session.user) {
-      req.session.destroy(err => {
-          if (err) {
-              res.json ({
-                  message: `Can't log out: ${err.message}`
-              })
-          } else {
-              res.json ({
-                  message: `Logged out successfully`
-              })
-          }
-      })
-  } else {
-      res.json({
-          message: `Session doesn't exist`
-      })
+
+router.get("/logout", (req, res, next) => {
+  if(req.session.user){
+    req.session.destroy(err => {
+      if(err) {
+        next(err)
+      }else{
+        res.status(200).json({ message: 'logged out'})
+      }
+    })
+  } else{
+    res.status(200).json({ message: 'no session'})
   }
-})
+});
 
 
 module.exports = router;
