@@ -16,8 +16,8 @@ const session = require('express-session');
   or you can use a session store like `connect-session-knex`.
  */
 
-const usersRouter = require('./users/users-router.js/');
-const authRouter = require('./auth/auth-router.js');
+const usersRouter = require('./users/users-router');
+const authRouter = require('./auth/auth-router');
 const server = express();
 
 server.use(helmet());
