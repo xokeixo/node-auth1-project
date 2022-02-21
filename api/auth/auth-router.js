@@ -7,19 +7,32 @@ const {
   checkUsernameFree 
 } = require('../auth/auth-middleware');
 
-const validatePayload = (req, res, next) => {
-  next()
-};
+// router.post('/register', checkPasswordLength, checkUsernameFree, async (req, res, next) => {
+//   try {
+//     const hash = bcrypt.hashSync(req.body.password, 10)
+//     const newUser = await User.add({ 
+//       username: req.body.username, 
+//       password: hash})
+//     res.status(201).json(newUser)
+//   } catch (error) {
+//     res.status(500).json(`Server error: ${error.message}`)
+//   }
+// });
 
-router.post('/register', checkPasswordLength, checkUsernameFree, async (req, res, next) => {
-  try {
-    const hash = bcrypt.hashSync(req.body.password, 10)
-    const newUser = await User.add({ username: req.body.username, password: hash})
-    res.status(201).json(newUser)
-  } catch (error) {
-    res.status(500).json(`Server error: ${error.message}`)
-  }
-});
+router.post('/register', (req, res, next) => {
+  let user = req.body;
+  const hash = bcrypt.hashSync(user.password, 10); 
+  user.password = hash;
+
+  User.add(user)
+    .then((saved) => {
+      res.status(201).json(saved);
+    })
+    .catch((error) => {
+      console.log(error);
+      res.status(500).json(error);
+    });
+})
 
 router.post('/login', checkUsernameExists, async (req, res, next) => {
   try {
