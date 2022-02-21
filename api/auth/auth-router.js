@@ -1,63 +1,59 @@
-// Require `checkUsernameFree`, `checkUsernameExists` and `checkPasswordLength`
-// middleware functions from `auth-middleware.js`. You will need them here!
+const router = require('express').Router();
+const User = require('../users/users-model');
+const bcrypt = require('bcryptjs');
+const { 
+  checkPasswordLength, 
+  checkUsernameExists, 
+  checkUsernameFree 
+} = require('../auth/auth-middleware');
 
+const validatePayload = (req, res, next) => {
+  next()
+};
 
-/**
-  1 [POST] /api/auth/register { "username": "sue", "password": "1234" }
-
-  response:
-  status 200
-  {
-    "user_id": 2,
-    "username": "sue"
+router.post('/register', checkPasswordLength, checkUsernameFree, async (req, res, next) => {
+  try {
+    const hash = bcrypt.hashSync(req.body.password, 10)
+    const newUser = await User.add({ username: req.body.username, password: hash})
+    res.status(201).json(newUser)
+  } catch (error) {
+    res.status(500).json(`Server error: ${error.message}`)
   }
+});
 
-  response on username taken:
-  status 422
-  {
-    "message": "Username taken"
+router.post('/login', checkUsernameExists, async (req, res, next) => {
+  try {
+    const verified = bcrypt.compareSync(req.body.password, req.userData.username)
+    if(verified){
+      req.session.user = req.userData
+      req.json(`Welcome back ${req.userData.username}`)
+    } else {
+      res.status(401).json("Incorrect username or password")
+    }
+  } catch (error) {
+    res.status(500).json(`Server error: ${error.message}`)
   }
+});
 
-  response on password three chars or less:
-  status 422
-  {
-    "message": "Password must be longer than 3 chars"
+router.get('/logout', async (req, res, next) => {
+  if (req.session.user) {
+      req.session.destroy(err => {
+          if (err) {
+              res.json ({
+                  message: `Can't log out: ${err.message}`
+              })
+          } else {
+              res.json ({
+                  message: `Logged out successfully`
+              })
+          }
+      })
+  } else {
+      res.json({
+          message: `Session doesn't exist`
+      })
   }
- */
+})
 
 
-/**
-  2 [POST] /api/auth/login { "username": "sue", "password": "1234" }
-
-  response:
-  status 200
-  {
-    "message": "Welcome sue!"
-  }
-
-  response on invalid credentials:
-  status 401
-  {
-    "message": "Invalid credentials"
-  }
- */
-
-
-/**
-  3 [GET] /api/auth/logout
-
-  response for logged-in users:
-  status 200
-  {
-    "message": "logged out"
-  }
-
-  response for not-logged-in users:
-  status 200
-  {
-    "message": "no session"
-  }
- */
-
- 
-// Don't forget to add the router to the `exports` object so it can be required in other modules
+module.exports = router;
