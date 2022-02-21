@@ -4,22 +4,19 @@ const bcrypt = require('bcryptjs');
 const { 
   checkPasswordLength, 
   checkUsernameExists, 
-  checkUsernameFree 
+  checkUsernameFree,
 } = require('../auth/auth-middleware');
 
 router.post('/register', checkPasswordLength, checkUsernameFree, (req, res, next) => {
-  const user = req.body;
-  const hash = bcrypt.hashSync(user.password, 10); 
-  user.password = hash;
+  const { username, password } = req.body;
+  const hash = bcrypt.hashSync(password, 8);
 
-  Users.add(user)
-    .then((saved) => {
-      res.status(200).json(saved);
+  Users.add({ username, password: hash })
+    .then(saved => {
+      res.status(201).json(saved)
     })
-    .catch((err) => {
-      res.status(422).json(err);
-    });
-})
+    .catch(next)
+});
 
 router.post("/login", checkUsernameExists, (req, res, next) => {
   let { username, password } = req.body;
@@ -58,5 +55,13 @@ router.get("/logout", (req, res, next) => {
   }
 });
 
+// router.get('/', restricted, async (req, res, next) => {
+//   try {
+//     const users = Users.find()
+//     res.json(users)
+//   } catch(err) {
+//     next(err)
+//   }
+// });
 
 module.exports = router;
